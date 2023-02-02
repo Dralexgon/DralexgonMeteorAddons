@@ -1,8 +1,8 @@
-# Meteor Addon Template
+# Meteorite (Meteor Addon)
 
-A template to allow easy usage of the Meteor Addon API.
+A Meteor Addon with various modules.
 
-### How to use:  
-- Clone this project
-- Use this template to create new modules/commands
-- Run the mod with Meteor.
+### Modules:
+- Feur: Answer "feur" to messages ending with "quoi"
+- Richarde: Prevent you to attack Richarde (spiders)
+- TradeBookFinder: Place and break lecterns to find a book with a specific enchant

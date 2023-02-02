@@ -178,11 +178,11 @@ public class TradeBookFinder extends Module {
                             int price = tradeOffer.getAdjustedFirstBuyItem().getCount();
                             boolean isValid = enchant.get().contains(id) && (!onlyMaxLevel.get() || getMaxEnchant(id) == Integer.parseInt(lvl) && price <= maxEmeraldPrice.get());
                             Text text = Text.of("§" + (isValid?"2":"4") + "Found " + id + " " + lvl + " book for " + price + " emeralds" + (isValid?"!":"."));
-                            mc.player.sendMessage(text);
+                            mc.player.sendMessage(text, true);
                             if (isValid) {
                                 toggle();
                                 state = State.FOUND_ENCHANTED_BOOK;
-                                mc.player.sendMessage(text, true);
+                                info(text);
                                 mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_PLAYER_LEVELUP, 1.0F));
                             } else {
                                 lastEnchantedBook = lvl;
