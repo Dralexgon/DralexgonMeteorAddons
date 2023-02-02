@@ -1,14 +1,13 @@
-package com.example.addon.modules;
+package com.dralexgon.meteorite.modules;
 
-import com.example.addon.Addon;
+import com.dralexgon.meteorite.Meteorite;
 import meteordevelopment.meteorclient.events.entity.player.InteractBlockEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
-import meteordevelopment.meteorclient.settings.Setting;
-import meteordevelopment.meteorclient.settings.SettingGroup;
-import meteordevelopment.meteorclient.settings.StringListSetting;
+import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
+import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -39,10 +38,29 @@ public class TradeBookFinder extends Module {
 
     private final Setting<List<String>> enchant = sgGeneral.add(new StringListSetting.Builder()
         .name("enchant")
-        .description("The exact name of the enchant you want to find")
+        .description("The exact name of the enchant you want to find.")
         .defaultValue(List.of("mending", "blast_protection"))
         .build()
     );
+
+    private final Setting<Boolean> onlyMaxLevel = sgGeneral.add(new BoolSetting.Builder()
+        .name("only-max-level")
+        .description("Only find books with the max level of the enchant.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Integer> maxEmeraldPrice = sgGeneral.add(new IntSetting.Builder()
+        .name("max-emerald-price")
+        .description("The max emerald price of the book.")
+        .defaultValue(20)
+        .min(1)
+        .sliderRange(1, 64)
+        .build());
+
+    public TradeBookFinder() {
+        super(Meteorite.CATEGORY, "Trade Book Finder", "Place and break lecterns to find a book with a specific enchant");
+    }
 
     public static State state;
     public static long waitingTimestamp;
@@ -50,9 +68,6 @@ public class TradeBookFinder extends Module {
     public static BlockPos lecternPos;
     public static String lastEnchantedBook;
 
-    public TradeBookFinder() {
-        super(Addon.CATEGORY, "TradeBookFinder", "Place and break lecterns to find a book with a specific enchant");
-    }
 
     public static void littleReset() {
         waitingTimestamp = 0;
@@ -66,6 +81,8 @@ public class TradeBookFinder extends Module {
         lecternPos = null;
     }
 
+
+
     @Override
     public void onActivate() {
         if (countLectern() == 0) {
@@ -74,7 +91,7 @@ public class TradeBookFinder extends Module {
             toggle();
             return;
         }
-        if (!mc.player.getStackInHand(Hand.OFF_HAND).getItem().equals(Items.LECTERN)) {
+        if (!mc.player.getOffHandStack().getItem().equals(Items.LECTERN)) {
             error("§4You need to put a lectern in your offhand");
             toggle();
             return;
@@ -95,7 +112,6 @@ public class TradeBookFinder extends Module {
 
     @Override
     public void onDeactivate() {
-        this.error("This module is not finished yet.");
     }
 
     public int countLectern() {
@@ -130,7 +146,7 @@ public class TradeBookFinder extends Module {
     public void onInteract(InteractBlockEvent event) {
         BlockHitResult hitResult = event.result;
         Block block = mc.world.getBlockState(hitResult.getBlockPos()).getBlock();
-        if (isActive() && state == State.READY) {
+        if (state == State.READY) {
             if (block.equals(Blocks.LECTERN)) {
                 lecternPos = hitResult.getBlockPos();
                 mc.player.sendMessage(Text.of("§2Lectern register"), true);
@@ -142,56 +158,44 @@ public class TradeBookFinder extends Module {
     @EventHandler
     public void onPacketS2C(PacketEvent.Receive event) {
         Packet packet = event.packet;
-        //mc.player.sendMessage(Text.of("test1 passed !"), false);
-        if (!isActive()) return;
-        //mc.player.sendMessage(Text.of("test2 passed !"), false);
 
         if (packet instanceof OpenScreenS2CPacket) {
-            mc.player.sendMessage(Text.of("test3 passed !"), false);
             if (!(state == State.WAITING_FOR_TRADE_OFFER)) return;
-            mc.player.sendMessage(Text.of("test4 passed !"), false);
             OpenScreenS2CPacket openScreenS2CPacket = (OpenScreenS2CPacket) packet;
             if (openScreenS2CPacket.getScreenHandlerType() == ScreenHandlerType.MERCHANT) event.cancel();
-            mc.player.sendMessage(Text.of("test5 passed !"), false);
         }
         if (packet instanceof SetTradeOffersS2CPacket) {
-            mc.player.sendMessage(Text.of("test6 passed !"), false);
             if (!(state == State.WAITING_FOR_TRADE_OFFER)) return;
             lastEnchantedBook = null;
             SetTradeOffersS2CPacket setTradeOffersS2CPacket = (SetTradeOffersS2CPacket) packet;
             setTradeOffersS2CPacket.getOffers().forEach(tradeOffer -> {
                 ItemStack item = tradeOffer.getSellItem();
-                mc.player.sendMessage(Text.of("test7 passed !"), false);
                 if (item.hasNbt()) {
                     item.getNbt().getKeys().forEach(key -> {
                         if (key.equals("StoredEnchantments")) {
                             String id = item.getNbt().get("StoredEnchantments").asString().split("\"")[1].split(":")[1];
                             String lvl = item.getNbt().get("StoredEnchantments").asString().split("lvl:")[1].split("s}")[0];
-                            if (enchant.get().contains(id)) {
+                            int price = tradeOffer.getAdjustedFirstBuyItem().getCount();
+                            boolean isValid = enchant.get().contains(id) && (!onlyMaxLevel.get() || getMaxEnchant(id) == Integer.parseInt(lvl) && price <= maxEmeraldPrice.get());
+                            Text text = Text.of("§" + (isValid?"2":"4") + "Found " + id + " " + lvl + " book for " + price + " emeralds" + (isValid?"!":"."));
+                            mc.player.sendMessage(text);
+                            if (isValid) {
                                 toggle();
                                 state = State.FOUND_ENCHANTED_BOOK;
-                                Text text = Text.of("§2Found " + enchant + " book!");
-                                mc.player.sendMessage(text);
                                 mc.player.sendMessage(text, true);
                                 mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_PLAYER_LEVELUP, 1.0F));
                             } else {
-                                mc.player.sendMessage(Text.of("§4Found " + id + " book."), true);
                                 lastEnchantedBook = lvl;
                             }
                         }
                     });
                 }
             });
-            mc.player.sendMessage(Text.of("test8 passed !"), false);
-            if (state == State.FOUND_ENCHANTED_BOOK) {
-                mc.player.sendMessage(Text.of("test9 passed !"), false);
-                return;
-            }
+            if (state == State.FOUND_ENCHANTED_BOOK) return;
             if (lastEnchantedBook == null) mc.player.sendMessage(Text.of("§4No enchanted book this trade."), true);
             event.cancel();
             littleReset();
             breakLectern();
-            mc.player.sendMessage(Text.of("test10 passed !"), false);
             //The loop of breaking lectern is closed
         }
     }
@@ -215,14 +219,14 @@ public class TradeBookFinder extends Module {
             }
         }
         if (closestVillager != null) {
-            mc.interactionManager.interactEntity(mc.player, closestVillager, mc.player.getActiveHand());
+            mc.interactionManager.interactEntity(mc.player, closestVillager, Hand.OFF_HAND);
             state = State.WAITING_FOR_TRADE_OFFER;
         }
     }
 
     @EventHandler
     public void onTick(TickEvent.Post event) {
-        Addon.LOG.info("tick");
+        Meteorite.LOG.info("tick");
         if (mc == null || mc.world == null || mc.player == null) {
             return;
         }
@@ -246,5 +250,87 @@ public class TradeBookFinder extends Module {
         SEARCHING_VILLAGER,
         WAITING_FOR_TRADE_OFFER,
         FOUND_ENCHANTED_BOOK
+    }
+
+    public int getMaxEnchant(String enchant) {
+        switch (enchant) {
+            case "protection":
+                return 4;
+            case "fire_protection":
+                return 4;
+            case "feather_falling":
+                return 4;
+            case "blast_protection":
+                return 4;
+            case "projectile_protection":
+                return 4;
+            case "respiration":
+                return 3;
+            case "aqua_affinity":
+                return 1;
+            case "thorns":
+                return 3;
+            case "depth_strider":
+                return 3;
+            case "frost_walker":
+                return 2;
+            case "binding_curse":
+                return 1;
+            case "sharpness":
+                return 5;
+            case "smite":
+                return 5;
+            case "bane_of_arthropods":
+                return 5;
+            case "knockback":
+                return 2;
+            case "fire_aspect":
+                return 2;
+            case "looting":
+                return 3;
+            case "sweeping":
+                return 3;
+            case "efficiency":
+                return 5;
+            case "silk_touch":
+                return 1;
+            case "unbreaking":
+                return 3;
+            case "fortune":
+                return 3;
+            case "power":
+                return 5;
+            case "punch":
+                return 2;
+            case "flame":
+                return 1;
+            case "infinity":
+                return 1;
+            case "luck_of_the_sea":
+                return 3;
+            case "lure":
+                return 3;
+            case "loyalty":
+                return 3;
+            case "impaling":
+                return 5;
+            case "riptide":
+                return 3;
+            case "channeling":
+                return 1;
+            case "multishot":
+                return 1;
+            case "quick_charge":
+                return 3;
+            case "piercing":
+                return 4;
+            case "mending":
+                return 1;
+            case "vanishing_curse":
+                return 1;
+            default:
+                error("§4Enchant : " + enchant + " not found");
+                return 0;
+        }
     }
 }

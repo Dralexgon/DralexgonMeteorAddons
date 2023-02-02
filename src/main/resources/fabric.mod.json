@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
-  "id": "dralexgon-utilities",
+  "id": "meteorite",
   "version": "${version}",
-  "name": "DralexgonUtilities",
+  "name": "Meteorite",
   "description": "An addon for Meteor by Dralexgon.",
   "authors": [
     "Dralexgon"
   ],
   "contact": {
-    "repo": "https://github.com/MeteorDevelopment/meteor-addon-template"
+    "repo": "https://github.com/Dralexgon/Meteorite"
   },
   "icon": "assets/template/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "com.example.addon.Addon"
+      "com.dralexgon.meteorite.Meteorite"
     ]
   },
   "mixins": [
