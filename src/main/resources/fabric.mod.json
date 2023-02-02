@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "addon-template",
+  "id": "dralexgon-utilities",
   "version": "${version}",
-  "name": "Addon Template",
-  "description": "An addon template for the Meteor addons.",
+  "name": "DralexgonUtilities",
+  "description": "An addon for Meteor by Dralexgon.",
   "authors": [
-    "seasnail"
+    "Dralexgon"
   ],
   "contact": {
     "repo": "https://github.com/MeteorDevelopment/meteor-addon-template"
