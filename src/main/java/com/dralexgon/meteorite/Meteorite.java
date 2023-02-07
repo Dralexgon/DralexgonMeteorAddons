@@ -2,9 +2,7 @@ package com.dralexgon.meteorite;
 
 import com.dralexgon.meteorite.commands.CommandExample;
 import com.dralexgon.meteorite.hud.HudExample;
-import com.dralexgon.meteorite.modules.Feur;
-import com.dralexgon.meteorite.modules.Richarde;
-import com.dralexgon.meteorite.modules.TradeBookFinder;
+import com.dralexgon.meteorite.modules.*;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -25,10 +23,14 @@ public class Meteorite extends MeteorAddon {
         LOG.info("Initializing Meteor Addon Template");
 
         // Modules
+
+        Modules.get().add(new TradeBookFinder());
+        if (Modules.get().get(TradeBookFinder.class).isActive())
+            Modules.get().get(TradeBookFinder.class).toggle();
         Modules.get().add(new Feur());
         Modules.get().add(new Richarde());
-        Modules.get().add(new TradeBookFinder());
-        Modules.get().get(TradeBookFinder.class).toggle();
+        Modules.get().add(new Debug());
+        Modules.get().add(new AutoLight());
 
 
         // Commands

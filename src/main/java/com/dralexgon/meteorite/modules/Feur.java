@@ -32,7 +32,8 @@ public class Feur extends Module {
 
         ChatMessageS2CPacket packet = (ChatMessageS2CPacket) event.packet;
         String message = packet.body().content();
-        if (ignorePunctuation.get()) message = message.replaceAll("[ .!?]", "");
+        if (!ignorePunctuation.get()) return;
+        message = message.replaceAll("[ .!?]", "");
         if (!packet.sender().equals(mc.player.getUuid()) && message.endsWith("quoi"))
             mc.player.networkHandler.sendChatMessage("feur !");
     }

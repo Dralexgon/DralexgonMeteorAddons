@@ -19,6 +19,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
+import net.minecraft.network.packet.s2c.play.CloseScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetTradeOffersS2CPacket;
 import net.minecraft.screen.ScreenHandlerType;
@@ -54,7 +55,7 @@ public class TradeBookFinder extends Module {
         .name("max-emerald-price")
         .description("The max emerald price of the book.")
         .defaultValue(20)
-        .min(1)
+        .min(5)
         .sliderRange(1, 64)
         .build());
 
@@ -85,6 +86,10 @@ public class TradeBookFinder extends Module {
 
     @Override
     public void onActivate() {
+        if (mc.player == null) {
+            toggle();
+            return;
+        }
         if (countLectern() == 0) {
             error("§4You need at least one lectern in your inventory");
             mc.player.sendMessage(Text.of("§4You need at least one lectern in your inventory"), true);
@@ -134,7 +139,7 @@ public class TradeBookFinder extends Module {
         state = State.MINING;
     }
 
-    public void placeLectern() {//TODO use packet instead
+    public void placeLectern() {
         BlockPos lp = lecternPos;
         BlockHitResult hitResult = new BlockHitResult(new Vec3d(lp.getX(), lp.getY(), lp.getZ()), Direction.UP, lp, false);
         mc.interactionManager.interactBlock(
@@ -156,9 +161,12 @@ public class TradeBookFinder extends Module {
     }
 
     @EventHandler
-    public void onPacketS2C(PacketEvent.Receive event) {
+    public void onPacketS2C(PacketEvent.Receive event) {//TODO ask server to update inventory
         Packet packet = event.packet;
-
+        if (packet instanceof CloseScreenS2CPacket) {
+            if (!(state == State.MINING)) return;
+            event.cancel();
+        }
         if (packet instanceof OpenScreenS2CPacket) {
             if (!(state == State.WAITING_FOR_TRADE_OFFER)) return;
             OpenScreenS2CPacket openScreenS2CPacket = (OpenScreenS2CPacket) packet;
@@ -196,7 +204,6 @@ public class TradeBookFinder extends Module {
             event.cancel();
             littleReset();
             breakLectern();
-            //The loop of breaking lectern is closed
         }
     }
 
@@ -249,6 +256,7 @@ public class TradeBookFinder extends Module {
         MINING,
         SEARCHING_VILLAGER,
         WAITING_FOR_TRADE_OFFER,
+        WAITING_CLOSE_SCREEN_PACKET,
         FOUND_ENCHANTED_BOOK
     }
 
