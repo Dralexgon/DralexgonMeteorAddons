@@ -29,7 +29,7 @@ public class Meteorite extends MeteorAddon {
             Modules.get().get(TradeBookFinder.class).toggle();
         Modules.get().add(new Feur());
         Modules.get().add(new Richarde());
-        Modules.get().add(new Debug());
+        //Modules.get().add(new Debug());
         Modules.get().add(new AutoLight());
 
 
